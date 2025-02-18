@@ -1,6 +1,9 @@
 package model
 
-//import "time"
+const (
+	DayFormat = "20060102"
+	Limit     = 50
+)
 
 type Task struct {
 	ID      string `json:"id"`

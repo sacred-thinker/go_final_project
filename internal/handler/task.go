@@ -2,11 +2,12 @@ package handler
 
 import (
 	"encoding/json"
-	"go_final_project/internal/model"
-	"go_final_project/internal/service"
 	"net/http"
 	"strconv"
 	"time"
+
+	"go_final_project/internal/model"
+	"go_final_project/internal/service"
 )
 
 type TaskHandler struct {
@@ -120,7 +121,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	search := r.URL.Query().Get("search")
-	limit := 50
+	//limit := 50
 
 	var tasks []model.Task
 	var err error
@@ -128,13 +129,13 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	if search != "" {
 		var date time.Time
 		if date, err = time.Parse("02.01.2006", search); err == nil {
-			dateStr := date.Format("20060102")
-			tasks, err = h.service.GetTasksByDate(dateStr, limit)
+			dateStr := date.Format(model.DayFormat)
+			tasks, err = h.service.GetTasksByDate(dateStr, model.Limit)
 		} else {
-			tasks, err = h.service.GetTasksBySearch(search, limit)
+			tasks, err = h.service.GetTasksBySearch(search, model.Limit)
 		}
 	} else {
-		tasks, err = h.service.GetAllTasks(limit)
+		tasks, err = h.service.GetAllTasks(model.Limit)
 	}
 
 	if err != nil {

@@ -2,11 +2,12 @@ package service
 
 import (
 	"errors"
-	"go_final_project/internal/model"
-	"go_final_project/internal/repository"
 	"strconv"
 	"strings"
 	"time"
+
+	"go_final_project/internal/model"
+	"go_final_project/internal/repository"
 )
 
 type TaskService interface {
@@ -34,13 +35,13 @@ func (s *taskService) AddTask(task model.Task) (int64, error) {
 	}
 
 	now := time.Now()
-	todayStr := now.Format("20060102")
+	todayStr := now.Format(model.DayFormat)
 
 	if task.Date == "" {
 		task.Date = todayStr
 	}
 
-	taskDate, err := time.Parse("20060102", task.Date)
+	taskDate, err := time.Parse(model.DayFormat, task.Date)
 	if err != nil {
 		return 0, errors.New("неправильный формат даты")
 	}
@@ -85,23 +86,18 @@ func (s *taskService) UpdateTask(task model.Task) error {
 		return errors.New("неверный формат идентификатора задачи")
 	}
 
-	_, err = s.repo.GetTaskByID(task.ID)
-	if err != nil {
-		return errors.New("задача не найдена")
-	}
-
 	if task.Title == "" {
 		return errors.New("не указан заголовок задачи")
 	}
 
 	now := time.Now()
-	todayStr := now.Format("20060102")
+	todayStr := now.Format(model.DayFormat)
 
 	if task.Date == "" {
 		task.Date = todayStr
 	}
 
-	taskDate, err := time.Parse("20060102", task.Date)
+	taskDate, err := time.Parse(model.DayFormat, task.Date)
 	if err != nil {
 		return errors.New("неправильный формат даты")
 	}
@@ -117,7 +113,16 @@ func (s *taskService) UpdateTask(task model.Task) error {
 		}
 	}
 
-	return s.repo.UpdateTask(task)
+	rowsAffected, err := s.repo.UpdateTask(task)
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("задача не найдена")
+	}
+
+	return nil
 }
 
 func (s *taskService) DeleteTask(id int) error {
@@ -137,14 +142,15 @@ func (s *taskService) TaskDone(id int) error {
 			return err
 		}
 		task.Date = nextDate
-		return s.repo.UpdateTask(task)
+		_, err = s.repo.UpdateTask(task)
+		return err
 	} else {
 		return s.repo.DeleteTask(id)
 	}
 }
 
 func NextDate(now time.Time, date string, repeat string) (string, error) {
-	d, err := time.Parse("20060102", date)
+	d, err := time.Parse(model.DayFormat, date)
 	if err != nil {
 		return "", errors.New("неправильный формат даты")
 	}
@@ -173,19 +179,16 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 				d = d.AddDate(0, 0, days)
 			}
 		} else {
-			// Если дата d еще не наступила, просто добавляем дни
 			d = d.AddDate(0, 0, days)
 		}
-
-		// }
-		return d.Format("20060102"), nil
+		return d.Format(model.DayFormat), nil
 
 	case "y":
 		nextDate := d.AddDate(1, 0, 0)
 		for !nextDate.After(now) {
 			nextDate = nextDate.AddDate(1, 0, 0)
 		}
-		return nextDate.Format("20060102"), nil
+		return nextDate.Format(model.DayFormat), nil
 
 	case "w":
 		if len(parts) != 2 {
@@ -201,7 +204,6 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 			days[i] = day
 		}
 
-		// Начинаем с следующего дня
 		nextDate := d
 		if nextDate.Before(now) {
 			nextDate = now
@@ -214,7 +216,7 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 			}
 			for _, day := range days {
 				if weekday == day {
-					return nextDate.Format("20060102"), nil
+					return nextDate.Format(model.DayFormat), nil
 				}
 			}
 		}
@@ -263,7 +265,7 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 				if nextDate.Day() == dayOfMonth {
 					if len(months) == 0 || contains(months, int(nextDate.Month())) {
 						if nextDate.After(now) {
-							return nextDate.Format("20060102"), nil
+							return nextDate.Format(model.DayFormat), nil
 						}
 					}
 				}
@@ -273,7 +275,6 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 	default:
 		return "", errors.New("неверный тип повтора")
 	}
-
 }
 
 func getLastDayOfMonth(t time.Time) int {

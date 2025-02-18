@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"log"
 	"os"
 )
 
@@ -33,6 +32,6 @@ func InitDB(dbFile string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Database открыта.")
+
 	return db, nil
 }

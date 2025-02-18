@@ -1,9 +1,11 @@
 package handler
 
 import (
-	"go_final_project/internal/service"
 	"net/http"
 	"time"
+
+	"go_final_project/internal/model"
+	"go_final_project/internal/service"
 )
 
 type NextDateHandler struct{}
@@ -17,7 +19,7 @@ func (h *NextDateHandler) HandleNextDate(w http.ResponseWriter, r *http.Request)
 	dateStr := r.FormValue("date")
 	repeat := r.FormValue("repeat")
 
-	now, err := time.Parse("20060102", nowStr)
+	now, err := time.Parse(model.DayFormat, nowStr)
 	if err != nil {
 		http.Error(w, "Неверный текущий формат даты", http.StatusBadRequest)
 		return

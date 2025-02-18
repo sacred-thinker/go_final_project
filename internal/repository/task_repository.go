@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	_ "github.com/mattn/go-sqlite3"
+
 	"go_final_project/internal/model"
 )
 
@@ -14,7 +15,7 @@ type TaskRepository interface {
 	GetTasksBySearch(search string, limit int) ([]model.Task, error)
 	GetAllTasks(limit int) ([]model.Task, error)
 	GetTaskByID(id string) (model.Task, error)
-	UpdateTask(task model.Task) error
+	UpdateTask(task model.Task) (int64, error)
 	DeleteTask(id int) error
 }
 
@@ -99,10 +100,19 @@ func (r *taskRepository) GetTaskByID(id string) (model.Task, error) {
 	return task, nil
 }
 
-func (r *taskRepository) UpdateTask(task model.Task) error {
+func (r *taskRepository) UpdateTask(task model.Task) (int64, error) {
 	query := "UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?"
-	_, err := r.db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
-	return err
+	result, err := r.db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsAffected, nil
 }
 
 func (r *taskRepository) DeleteTask(id int) error {

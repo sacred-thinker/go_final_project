@@ -2,17 +2,21 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/golang-jwt/jwt/v5"
-	"go_final_project/internal/model"
 	"net/http"
-	"os"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+
+	"go_final_project/internal/config"
+	"go_final_project/internal/model"
 )
 
-type AuthHandler struct{}
+type AuthHandler struct {
+	config *config.Config
+}
 
-func NewAuthHandler() *AuthHandler {
-	return &AuthHandler{}
+func NewAuthHandler(cfg *config.Config) *AuthHandler {
+	return &AuthHandler{config: cfg}
 }
 
 func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
@@ -30,13 +34,12 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	envPassword := os.Getenv("TODO_PASSWORD")
-	if envPassword == "" {
+	if h.config.TodoPassword == "" {
 		http.Error(w, "Аутентификация не настроена", http.StatusInternalServerError)
 		return
 	}
 
-	if req.Password != envPassword {
+	if req.Password != h.config.TodoPassword {
 		response := model.SignInResponse{Error: "Неверный пароль"}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -45,11 +48,11 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"hash": envPassword,
+		"hash": h.config.TodoPassword,
 		"exp":  time.Now().Add(8 * time.Hour).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(envPassword))
+	tokenString, err := token.SignedString([]byte(h.config.TodoPassword))
 	if err != nil {
 		http.Error(w, "Ошибка генерации токена", http.StatusInternalServerError)
 		return
@@ -63,8 +66,7 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		envPassword := os.Getenv("TODO_PASSWORD")
-		if len(envPassword) == 0 {
+		if h.config.TodoPassword == "" {
 			next(w, r)
 			return
 		}
@@ -79,7 +81,7 @@ func (h *AuthHandler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
-			return []byte(envPassword), nil
+			return []byte(h.config.TodoPassword), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -88,7 +90,7 @@ func (h *AuthHandler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || claims["hash"] != envPassword {
+		if !ok || claims["hash"] != h.config.TodoPassword {
 			http.Error(w, "Недействительный токен", http.StatusUnauthorized)
 			return
 		}
